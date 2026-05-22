@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">DeadLock</string>
+    <string name="accessibility_service_description">DeadLock Focus Guard monitors app activity to enforce lock sessions and block distracting applications.</string>
+</resources>
