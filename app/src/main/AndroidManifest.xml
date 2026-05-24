@@ -83,7 +83,7 @@
         <service
             android:name=".service.DeadLockAccessibilityService"
             android:exported="true"
-            android:label="DeadLock Focus Guard"
+            android:label="No Mercy Focus Guard"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -106,7 +106,7 @@
         <!-- Notification Listener Service -->
         <service
             android:name=".service.DeadLockNotificationListener"
-            android:label="DeadLock Notification Vault"
+            android:label="No Mercy Notification Vault"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>

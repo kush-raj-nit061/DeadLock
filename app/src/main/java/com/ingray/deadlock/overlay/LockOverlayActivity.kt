@@ -227,7 +227,7 @@ private fun LockOverlayScreen(
             }
 
             Text(
-                text = if (isBedtimeActive && !isSessionActive) "BEDTIME LOCK" else "DEADLOCK",
+                text = if (isBedtimeActive && !isSessionActive) "BEDTIME LOCK" else "NO MERCY",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 6.sp,

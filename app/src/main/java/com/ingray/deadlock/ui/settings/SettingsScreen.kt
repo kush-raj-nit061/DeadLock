@@ -361,7 +361,7 @@ fun SettingsScreen(
                 NeonLabel("About Terminal")
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "DeadLock v1.0\nSecure Focus Environment\nMaximum Discipline. Zero Mercy.",
+                    text = "No Mercy v1.0\nSecure Focus Environment\nMaximum Discipline. Zero Mercy.",
                     color = TextTertiary,
                     fontSize = 13.sp,
                     lineHeight = 22.sp,

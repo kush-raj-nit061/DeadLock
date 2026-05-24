@@ -97,7 +97,7 @@ fun DashboardScreen(
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        text = "Dashboard",
+                        text = "No Mercy",
                         style = MaterialTheme.typography.headlineMedium,
                         color = TextPrimary,
                         fontWeight = FontWeight.Black

@@ -44,11 +44,11 @@ class LockEnforcementService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
-                buildNotification("DeadLock Active", "Focus enforcement running"),
+                buildNotification("No Mercy Active", "Focus enforcement running"),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
-            startForeground(NOTIFICATION_ID, buildNotification("DeadLock Active", "Focus enforcement running"))
+            startForeground(NOTIFICATION_ID, buildNotification("No Mercy Active", "Focus enforcement running"))
         }
         startSessionMonitor()
     }
@@ -96,7 +96,7 @@ class LockEnforcementService : Service() {
                 if (session.isScheduled) {
                     "Automated Focus Active" to "Scheduled Lockdown in progress"
                 } else {
-                    "DeadLock Active — ${session.mode.displayName}" to "Remaining: ${minutes}m ${seconds}s"
+                    "No Mercy Active — ${session.mode.displayName}" to "Remaining: ${minutes}m ${seconds}s"
                 }
             } else {
                 val lockStartTime = session.startTime + (session.delayMinutes * 60_000L)
@@ -136,7 +136,7 @@ class LockEnforcementService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "DeadLock Enforcement",
+            "No Mercy Enforcement",
             NotificationManager.IMPORTANCE_LOW // Changed to LOW to prevent noise
         ).apply {
             description = "Active focus session enforcement"

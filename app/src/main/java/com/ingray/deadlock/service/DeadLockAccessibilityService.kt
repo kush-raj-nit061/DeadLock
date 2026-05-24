@@ -86,8 +86,8 @@ class DeadLockAccessibilityService : AccessibilityService() {
 
         val source = event.source ?: return
         
-        // Find if user is looking at DeadLock's app info or settings
-        val nodeText = source.findAccessibilityNodeInfosByText("DeadLock")
+        // Find if user is looking at No Mercy's app info or settings
+        val nodeText = source.findAccessibilityNodeInfosByText("No Mercy")
         val nodeTextGuard = source.findAccessibilityNodeInfosByText("Focus Guard")
         
         if (nodeText.isNotEmpty() || nodeTextGuard.isNotEmpty()) {
