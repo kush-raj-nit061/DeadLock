@@ -7,7 +7,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.ingray.deadlock.data.local.DeadLockDatabase
 import com.ingray.deadlock.data.local.dao.AnalyticsEventDao
+import com.ingray.deadlock.data.local.dao.FocusScheduleDao
 import com.ingray.deadlock.data.local.dao.FocusSessionDao
+import com.ingray.deadlock.data.local.dao.VaultedNotificationDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,6 +39,14 @@ object DatabaseModule {
     @Provides
     fun provideAnalyticsEventDao(db: DeadLockDatabase): AnalyticsEventDao =
         db.analyticsEventDao()
+
+    @Provides
+    fun provideFocusScheduleDao(db: DeadLockDatabase): FocusScheduleDao =
+        db.focusScheduleDao()
+
+    @Provides
+    fun provideVaultedNotificationDao(db: DeadLockDatabase): VaultedNotificationDao =
+        db.vaultedNotificationDao()
 
     @Provides
     @Singleton

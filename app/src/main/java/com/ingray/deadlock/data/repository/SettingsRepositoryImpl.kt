@@ -28,6 +28,11 @@ class SettingsRepositoryImpl @Inject constructor(
         val EXTEND_ON_BYPASS = booleanPreferencesKey("extend_on_bypass")
         val EXTENSION_MINUTES = intPreferencesKey("extension_minutes")
         val GRAYSCALE_ON_DETOX = booleanPreferencesKey("grayscale_on_detox")
+        val DEEP_WORK_WHITELIST = stringPreferencesKey("deep_work_whitelist")
+        val MONK_MODE_WHITELIST = stringPreferencesKey("monk_mode_whitelist")
+        val DOPAMINE_DETOX_BLACKLIST = stringPreferencesKey("dopamine_detox_blacklist")
+        val EXAM_MODE_WHITELIST = stringPreferencesKey("exam_mode_whitelist")
+        val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch")
     }
 
     override fun observeSettings(): Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -51,7 +56,18 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.EXTEND_ON_BYPASS] = settings.extendTimerOnBypassAttempt
             prefs[Keys.EXTENSION_MINUTES] = settings.extensionMinutesOnBypass
             prefs[Keys.GRAYSCALE_ON_DETOX] = settings.grayscaleOnDopamineDetox
+            prefs[Keys.DEEP_WORK_WHITELIST] = settings.deepWorkWhitelist.joinToString(",")
+            prefs[Keys.MONK_MODE_WHITELIST] = settings.monkModeWhitelist.joinToString(",")
+            prefs[Keys.DOPAMINE_DETOX_BLACKLIST] = settings.dopamineDetoxBlacklist.joinToString(",")
+            prefs[Keys.EXAM_MODE_WHITELIST] = settings.examModeWhitelist.joinToString(",")
         }
+    }
+
+    override suspend fun isFirstLaunch(): Boolean =
+        dataStore.data.first()[Keys.IS_FIRST_LAUNCH] ?: true
+
+    override suspend fun setFirstLaunchCompleted() {
+        dataStore.edit { it[Keys.IS_FIRST_LAUNCH] = false }
     }
 
     private fun Preferences.toSettings() = UserSettings(
@@ -66,6 +82,10 @@ class SettingsRepositoryImpl @Inject constructor(
         bedtimeEndMinute = this[Keys.BEDTIME_END_MINUTE] ?: 0,
         extendTimerOnBypassAttempt = this[Keys.EXTEND_ON_BYPASS] ?: true,
         extensionMinutesOnBypass = this[Keys.EXTENSION_MINUTES] ?: 5,
-        grayscaleOnDopamineDetox = this[Keys.GRAYSCALE_ON_DETOX] ?: true
+        grayscaleOnDopamineDetox = this[Keys.GRAYSCALE_ON_DETOX] ?: true,
+        deepWorkWhitelist = this[Keys.DEEP_WORK_WHITELIST]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+        monkModeWhitelist = this[Keys.MONK_MODE_WHITELIST]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+        dopamineDetoxBlacklist = this[Keys.DOPAMINE_DETOX_BLACKLIST]?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+        examModeWhitelist = this[Keys.EXAM_MODE_WHITELIST]?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
     )
 }

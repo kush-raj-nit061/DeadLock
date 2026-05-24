@@ -28,6 +28,9 @@ class BootReceiver : BroadcastReceiver() {
         ) return
 
         CoroutineScope(Dispatchers.IO).launch {
+            // Re-schedule automated disciplines
+            ScheduleWorker.runOnce(context)
+
             val activeSession = sessionRepository.getActiveSession()
             if (activeSession != null) {
                 analyticsRepository.recordEvent(

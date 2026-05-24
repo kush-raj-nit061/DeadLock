@@ -8,14 +8,19 @@ import kotlinx.coroutines.flow.Flow
 
 interface SessionRepository {
 
-    fun observeActiveSession(): Flow<FocusSession?>
+    fun observeActiveSessions(): Flow<List<FocusSession>>
+
+    suspend fun getActiveSessions(): List<FocusSession>
 
     suspend fun getActiveSession(): FocusSession?
 
     suspend fun startSession(
         durationMinutes: Int,
+        delayMinutes: Int = 0,
         mode: FocusMode,
-        packageNames: List<String>
+        packageNames: List<String>,
+        isScheduled: Boolean = false,
+        scheduleId: Long? = null
     ): FocusSession
 
     suspend fun cancelSession(sessionId: Long)
@@ -29,4 +34,6 @@ interface SessionRepository {
     suspend fun isPackageLocked(packageName: String): Boolean
 
     suspend fun getAllSessions(): List<FocusSession>
+
+    suspend fun grantEmergencyAccess(durationMinutes: Int = 2)
 }

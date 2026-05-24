@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ingray.deadlock.domain.model.AppInfo
@@ -24,10 +27,19 @@ data class LockConfigUiState(
     val installedApps: List<AppInfo> = emptyList(),
     val selectedPackages: Set<String> = emptySet(),
     val durationMinutes: Int = 25,
+    val delayMinutes: Int = 0,
+    val isCustomDuration: Boolean = false,
+    val customDurationInput: String = "",
+    val isCustomDelay: Boolean = false,
+    val customDelayInput: String = "",
     val focusMode: FocusMode = FocusMode.SOFT_FOCUS,
     val isLoading: Boolean = true,
     val sessionStarted: FocusSession? = null,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val isAccessibilityEnabled: Boolean = true,
+    val isOverlayEnabled: Boolean = true,
+    val isDeviceAdminEnabled: Boolean = true,
+    val isExactAlarmEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -35,7 +47,7 @@ class LockConfigViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sessionRepository: SessionRepository,
     private val analyticsRepository: AnalyticsRepository
-) : ViewModel() {
+) : ViewModel(), DefaultLifecycleObserver {
 
     private val _uiState = MutableStateFlow(LockConfigUiState())
     val uiState: StateFlow<LockConfigUiState> = _uiState.asStateFlow()
@@ -50,16 +62,56 @@ class LockConfigViewModel @Inject constructor(
 
     init {
         loadInstalledApps()
+        checkPermissions()
+    }
+
+    override fun onResume(owner: LifecycleOwner) {
+        checkPermissions()
+    }
+
+    fun checkPermissions() {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+        val enabledServices = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        val accessibilityEnabled = enabledServices.any {
+            it.resolveInfo.serviceInfo.packageName == context.packageName
+        }
+        val overlayEnabled = android.provider.Settings.canDrawOverlays(context)
+        
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        val adminComponent = android.content.ComponentName(context, com.ingray.deadlock.service.DeadLockAdminReceiver::class.java)
+        val deviceAdminEnabled = dpm.isAdminActive(adminComponent)
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val exactAlarmEnabled = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+
+        _uiState.update { it.copy(
+            isAccessibilityEnabled = accessibilityEnabled,
+            isOverlayEnabled = overlayEnabled,
+            isDeviceAdminEnabled = deviceAdminEnabled,
+            isExactAlarmEnabled = exactAlarmEnabled
+        ) }
     }
 
     private fun loadInstalledApps() {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             val pm = context.packageManager
-            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-            val apps = pm.queryIntentActivities(launchIntent, PackageManager.MATCH_ALL)
-                .map { resolve ->
+            val apps = try {
+                val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.queryIntentActivities(launchIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.queryIntentActivities(launchIntent, PackageManager.MATCH_ALL)
+                }
+                
+                resolveInfos.map { resolve ->
                     val pkg = resolve.activityInfo.packageName
                     AppInfo(
                         packageName = pkg,
@@ -67,8 +119,12 @@ class LockConfigViewModel @Inject constructor(
                         isSystemApp = (resolve.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                     )
                 }
+                .distinctBy { it.packageName }
                 .filter { it.packageName != context.packageName }
                 .sortedBy { it.appName }
+            } catch (e: Exception) {
+                emptyList()
+            }
 
             _uiState.update { it.copy(installedApps = apps, isLoading = false) }
         }
@@ -84,7 +140,31 @@ class LockConfigViewModel @Inject constructor(
     }
 
     fun setDuration(minutes: Int) {
-        _uiState.update { it.copy(durationMinutes = minutes) }
+        _uiState.update { it.copy(durationMinutes = minutes, isCustomDuration = false) }
+    }
+
+    fun toggleCustomDuration() {
+        _uiState.update { it.copy(isCustomDuration = !it.isCustomDuration) }
+    }
+
+    fun setCustomDurationInput(input: String) {
+        if (input.all { it.isDigit() } && input.length <= 4) {
+            _uiState.update { it.copy(customDurationInput = input) }
+        }
+    }
+
+    fun setDelay(minutes: Int) {
+        _uiState.update { it.copy(delayMinutes = minutes, isCustomDelay = false) }
+    }
+
+    fun toggleCustomDelay() {
+        _uiState.update { it.copy(isCustomDelay = !it.isCustomDelay) }
+    }
+
+    fun setCustomDelayInput(input: String) {
+        if (input.all { it.isDigit() } && input.length <= 4) {
+            _uiState.update { it.copy(customDelayInput = input) }
+        }
     }
 
     fun setFocusMode(mode: FocusMode) {
@@ -97,13 +177,34 @@ class LockConfigViewModel @Inject constructor(
 
     fun startSession() {
         val state = _uiState.value
+        if (!state.isAccessibilityEnabled || !state.isOverlayEnabled || !state.isDeviceAdminEnabled) {
+            // Re-check permissions to be sure
+            checkPermissions()
+            return
+        }
+
+        val duration = if (state.isCustomDuration) {
+            state.customDurationInput.toIntOrNull() ?: state.durationMinutes
+        } else {
+            state.durationMinutes
+        }
+
+        val delay = if (state.isCustomDelay) {
+            state.customDelayInput.toIntOrNull() ?: state.delayMinutes
+        } else {
+            state.delayMinutes
+        }
+
+        if (duration <= 0) return
         if (state.selectedPackages.isEmpty() && state.focusMode == FocusMode.SOFT_FOCUS) return
 
         viewModelScope.launch {
             val session = sessionRepository.startSession(
-                durationMinutes = state.durationMinutes,
+                durationMinutes = duration,
+                delayMinutes = delay,
                 mode = state.focusMode,
-                packageNames = state.selectedPackages.toList()
+                packageNames = state.selectedPackages.toList(),
+                isScheduled = false
             )
             analyticsRepository.recordEvent(
                 AnalyticsEvent(

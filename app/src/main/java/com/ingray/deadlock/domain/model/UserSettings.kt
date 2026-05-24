@@ -12,5 +12,9 @@ data class UserSettings(
     val bedtimeEndMinute: Int = 0,
     val extendTimerOnBypassAttempt: Boolean = true,
     val extensionMinutesOnBypass: Int = 5,
-    val grayscaleOnDopamineDetox: Boolean = true
+    val grayscaleOnDopamineDetox: Boolean = true,
+    val deepWorkWhitelist: List<String> = emptyList(),
+    val monkModeWhitelist: List<String> = emptyList(),
+    val dopamineDetoxBlacklist: List<String> = emptyList(),
+    val examModeWhitelist: List<String> = emptyList()
 )

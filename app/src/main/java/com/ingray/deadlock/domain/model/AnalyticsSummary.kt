@@ -10,6 +10,7 @@ data class DailyStats(
 data class AnalyticsSummary(
     val totalFocusMinutesToday: Int,
     val totalFocusMinutesWeek: Int,
+    val totalScreenTimeToday: Long,   // New: Overall phone usage today in ms
     val currentStreak: Int,
     val longestStreak: Int,
     val disciplineScore: Int,     // 0–100

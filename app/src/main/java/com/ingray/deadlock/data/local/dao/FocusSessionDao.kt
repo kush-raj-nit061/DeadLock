@@ -7,8 +7,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FocusSessionDao {
 
-    @Query("SELECT * FROM focus_sessions WHERE isActive = 1 LIMIT 1")
-    fun observeActiveSession(): Flow<FocusSessionEntity?>
+    @Query("SELECT * FROM focus_sessions WHERE isActive = 1")
+    fun observeActiveSessions(): Flow<List<FocusSessionEntity>>
+
+    @Query("SELECT * FROM focus_sessions WHERE isActive = 1")
+    suspend fun getActiveSessions(): List<FocusSessionEntity>
 
     @Query("SELECT * FROM focus_sessions WHERE isActive = 1 LIMIT 1")
     suspend fun getActiveSession(): FocusSessionEntity?

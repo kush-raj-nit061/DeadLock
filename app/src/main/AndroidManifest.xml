@@ -4,8 +4,6 @@
 
     <!-- Core permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        tools:ignore="CoarseFineLocation" />
 
     <!-- For foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -28,8 +26,16 @@
     <!-- For boot receiver -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- For exact alarms -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:ignore="ExactAlarmPermission" />
+
     <!-- For keeping screen on -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- For notification intercepting -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:name=".DeadLockApp"
@@ -41,6 +47,18 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DeadLock">
+
+        <!-- WorkManager Hilt Initializer -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- Main Activity -->
         <activity
@@ -85,6 +103,17 @@
                 android:value="Enforcing focus sessions by monitoring and blocking distracting apps" />
         </service>
 
+        <!-- Notification Listener Service -->
+        <service
+            android:name=".service.DeadLockNotificationListener"
+            android:label="DeadLock Notification Vault"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <!-- Boot Receiver -->
         <receiver
             android:name=".service.BootReceiver"
@@ -92,6 +121,24 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Schedule Receiver -->
+        <receiver android:name=".service.ScheduleReceiver" android:exported="false" />
+
+        <!-- Device Admin Receiver -->
+        <receiver
+            android:name=".service.DeadLockAdminReceiver"
+            android:description="@string/app_name"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
 

@@ -91,10 +91,22 @@ class LockEnforcementService : Service() {
             val remaining = session.endTime - now
             val minutes = (remaining / 60_000).toInt()
             val seconds = ((remaining % 60_000) / 1000).toInt()
-            updateNotification(
-                "DeadLock Active — ${session.mode.displayName}",
-                "Remaining: ${minutes}m ${seconds}s"
-            )
+            
+            val (title, content) = if (session.isLocked) {
+                if (session.isScheduled) {
+                    "Automated Focus Active" to "Scheduled Lockdown in progress"
+                } else {
+                    "DeadLock Active — ${session.mode.displayName}" to "Remaining: ${minutes}m ${seconds}s"
+                }
+            } else {
+                val lockStartTime = session.startTime + (session.delayMinutes * 60_000L)
+                val delayRemaining = lockStartTime - now
+                val delayMin = (delayRemaining / 60_000).toInt()
+                val delaySec = ((delayRemaining % 60_000) / 1000).toInt()
+                "Locking Soon" to "App block starts in: ${delayMin}m ${delaySec}s"
+            }
+            
+            updateNotification(title, content)
         }
     }
 
@@ -116,7 +128,8 @@ class LockEnforcementService : Service() {
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOnlyAlertOnce(true) // Ensure it doesn't "ping" on every timer update
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Keep it silent
             .build()
     }
 
@@ -124,7 +137,7 @@ class LockEnforcementService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             "DeadLock Enforcement",
-            NotificationManager.IMPORTANCE_HIGH
+            NotificationManager.IMPORTANCE_LOW // Changed to LOW to prevent noise
         ).apply {
             description = "Active focus session enforcement"
             setShowBadge(false)

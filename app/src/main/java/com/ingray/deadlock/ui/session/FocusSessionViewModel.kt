@@ -13,8 +13,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class FocusSessionUiState(
-    val session: FocusSession? = null,
-    val remainingMillis: Long = 0L,
+    val sessions: List<FocusSession> = emptyList(),
+    val currentSessionIndex: Int = 0,
+    val lastTick: Long = 0L, // New: Forces emission on timer updates
     val showEmergencyConfirm: Boolean = false,
     val showMathChallenge: Boolean = false,
     val mathA: Int = 0,
@@ -34,33 +35,44 @@ class FocusSessionViewModel @Inject constructor(
     val uiState: StateFlow<FocusSessionUiState> = _uiState.asStateFlow()
 
     init {
-        observeSession()
+        observeSessions()
     }
 
-    private fun observeSession() {
+    private fun observeSessions() {
         viewModelScope.launch {
-            sessionRepository.observeActiveSession().collect { session ->
-                if (session == null) {
+            sessionRepository.observeActiveSessions().collect { sessions ->
+                if (sessions.isEmpty()) {
                     _uiState.update { it.copy(isSessionEnded = true) }
                 } else {
-                    _uiState.update { it.copy(session = session, remainingMillis = session.remainingMillis) }
+                    _uiState.update { state -> 
+                        val newIndex = if (state.currentSessionIndex >= sessions.size) 0 else state.currentSessionIndex
+                        state.copy(sessions = sessions, currentSessionIndex = newIndex, isSessionEnded = false) 
+                    }
                 }
             }
         }
     }
 
+    fun selectSession(index: Int) {
+        _uiState.update { it.copy(currentSessionIndex = index) }
+    }
+
     fun updateRemainingTime() {
-        val session = _uiState.value.session ?: return
-        _uiState.update { it.copy(remainingMillis = session.remainingMillis) }
+        // Update lastTick to ensure StateFlow emits a new value even if sessions list is identical
+        _uiState.update { it.copy(lastTick = System.currentTimeMillis()) }
     }
 
     fun requestEmergencyUnlock() {
         viewModelScope.launch {
-            val session = _uiState.value.session ?: return@launch
-            analyticsRepository.recordEvent(
-                AnalyticsEvent(type = EventType.UNLOCK_ATTEMPT, sessionId = session.id)
-            )
-            sessionRepository.recordDistractionAttempt(session.id)
+            val sessions = _uiState.value.sessions
+            val index = _uiState.value.currentSessionIndex
+            if (index < sessions.size) {
+                val session = sessions[index]
+                analyticsRepository.recordEvent(
+                    AnalyticsEvent(type = EventType.UNLOCK_ATTEMPT, sessionId = session.id)
+                )
+                sessionRepository.recordDistractionAttempt(session.id)
+            }
         }
         val a = (10..99).random()
         val b = (10..99).random()
@@ -100,7 +112,8 @@ class FocusSessionViewModel @Inject constructor(
         val correct = state.mathA + state.mathB
         if (state.mathAnswer.trim().toIntOrNull() == correct) {
             viewModelScope.launch {
-                state.session?.let { sessionRepository.cancelSession(it.id) }
+                val session = state.sessions.getOrNull(state.currentSessionIndex)
+                session?.let { sessionRepository.cancelSession(it.id) }
             }
             _uiState.update { it.copy(showMathChallenge = false) }
         } else {
